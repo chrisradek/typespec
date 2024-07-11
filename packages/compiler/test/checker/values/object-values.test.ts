@@ -1,8 +1,14 @@
 import { ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
 import { isType, isValue } from "../../../src/index.js";
-import { expectDiagnostics } from "../../../src/testing/index.js";
-import { compileValue, compileValueOrType, diagnoseUsage, diagnoseValue } from "./utils.js";
+import { expectDiagnosticEmpty, expectDiagnostics } from "../../../src/testing/index.js";
+import {
+  compileAndDiagnoseValueOrType,
+  compileValue,
+  compileValueOrType,
+  diagnoseUsage,
+  diagnoseValue,
+} from "./utils.js";
 
 it("no properties", async () => {
   const object = await compileValue(`#{}`);
@@ -164,9 +170,12 @@ describe("(LEGACY) cast model to object value", () => {
   });
 
   it("prefers type over value constraints", async () => {
-    const valueOrType = await compileValueOrType(
+    const disableDeprecatedSuppresion = true;
+    const [valueOrType, diagnostics] = await compileAndDiagnoseValueOrType(
       `(valueof {a: string, b: string}) | {a: string, b: string}`,
-      `{a: "foo", b: "bar"}`
+      `{a: "foo", b: "bar"}`,
+      undefined,
+      disableDeprecatedSuppresion
     );
     ok(valueOrType && isType(valueOrType));
     strictEqual(valueOrType.kind, "Model");
@@ -179,6 +188,9 @@ describe("(LEGACY) cast model to object value", () => {
     ok(b);
     strictEqual(b.kind, "String");
     strictEqual(b.value, "bar");
+
+    // No diagnostic emitted when Type constraint matched
+    expectDiagnosticEmpty(diagnostics);
   });
 
   it("emit a warning diagnostic", async () => {

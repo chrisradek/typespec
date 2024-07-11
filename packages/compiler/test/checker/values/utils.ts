@@ -65,7 +65,8 @@ export async function diagnoseValue(code: string, other?: string): Promise<reado
 export async function compileAndDiagnoseValueOrType(
   constraint: string,
   code: string,
-  other?: string
+  other?: string,
+  disableDeprecatedSuppresion?: boolean
 ): Promise<[Type | Value | undefined, readonly Diagnostic[]]> {
   const host = await createTestHost();
   host.addJsFile("collect.js", {
@@ -78,7 +79,7 @@ export async function compileAndDiagnoseValueOrType(
       import "./collect.js";
       extern dec collect(target, value: ${constraint});
 
-      #suppress "deprecated" "for testing"
+      ${disableDeprecatedSuppresion ? "" : `#suppress "deprecated" "for testing"`}
       @collect(${code})
       @test model Test {}
       ${other ?? ""}

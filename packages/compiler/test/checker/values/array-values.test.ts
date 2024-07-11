@@ -1,8 +1,14 @@
 import { ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
 import { isType, isValue } from "../../../src/index.js";
-import { expectDiagnostics } from "../../../src/testing/index.js";
-import { compileValue, compileValueOrType, diagnoseUsage, diagnoseValue } from "./utils.js";
+import { expectDiagnosticEmpty, expectDiagnostics } from "../../../src/testing/index.js";
+import {
+  compileAndDiagnoseValueOrType,
+  compileValue,
+  compileValueOrType,
+  diagnoseUsage,
+  diagnoseValue,
+} from "./utils.js";
 
 it("no values", async () => {
   const object = await compileValue(`#[]`);
@@ -98,7 +104,13 @@ describe("(LEGACY) cast tuple to array value", () => {
   });
 
   it("prefers type over value constraints", async () => {
-    const valueOrType = await compileValueOrType(`(valueof unknown) | unknown`, `["foo"]`);
+    const disableDeprecatedSuppresion = true;
+    const [valueOrType, diagnostics] = await compileAndDiagnoseValueOrType(
+      `(valueof unknown) | unknown`,
+      `["foo"]`,
+      undefined,
+      disableDeprecatedSuppresion
+    );
     ok(valueOrType && isType(valueOrType));
     strictEqual(valueOrType.kind, "Tuple");
     expect(valueOrType.values).toHaveLength(1);
@@ -106,6 +118,9 @@ describe("(LEGACY) cast tuple to array value", () => {
     ok(foo);
     strictEqual(foo.kind, "String");
     strictEqual(foo.value, "foo");
+
+    // No diagnostic emitted when Type constraint matched
+    expectDiagnosticEmpty(diagnostics);
   });
 
   it("emit a warning diagnostic", async () => {
