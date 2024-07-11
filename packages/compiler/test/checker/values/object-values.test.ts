@@ -1,6 +1,6 @@
 import { ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
-import { isValue } from "../../../src/index.js";
+import { isType, isValue } from "../../../src/index.js";
 import { expectDiagnostics } from "../../../src/testing/index.js";
 import { compileValue, compileValueOrType, diagnoseUsage, diagnoseValue } from "./utils.js";
 
@@ -160,6 +160,24 @@ describe("(LEGACY) cast model to object value", () => {
     const b = value.properties.get("b")?.value;
     ok(b);
     strictEqual(b.valueKind, "StringValue");
+    strictEqual(b.value, "bar");
+  });
+
+  it("prefers type over value constraints", async () => {
+    const valueOrType = await compileValueOrType(
+      `(valueof {a: string, b: string}) | {a: string, b: string}`,
+      `{a: "foo", b: "bar"}`
+    );
+    ok(valueOrType && isType(valueOrType));
+    strictEqual(valueOrType.kind, "Model");
+    expect(valueOrType.properties.size).toBe(2);
+    const a = valueOrType.properties.get("a")?.type;
+    ok(a);
+    strictEqual(a.kind, "String");
+    strictEqual(a.value, "foo");
+    const b = valueOrType.properties.get("b")?.type;
+    ok(b);
+    strictEqual(b.kind, "String");
     strictEqual(b.value, "bar");
   });
 

@@ -971,6 +971,11 @@ export function createChecker(program: Program): Checker {
     kind: "argument" | "assignment";
     type: Type;
   }
+
+  interface CheckTypeConstraint {
+    kind: "argument" | "assignment";
+    type: Type;
+  }
   /**
    * Gets a type or value depending on the node and current constraint.
    * For nodes that can be both type or values(e.g. string), the value will be returned if the constraint expect a value of that type even if the constrain also allows the type.
@@ -982,10 +987,19 @@ export function createChecker(program: Program): Checker {
     constraint?: CheckConstraint | undefined
   ): Type | Value | null {
     const valueConstraint = extractValueOfConstraints(constraint);
+    const typeConstraint = extractTypeOfConstraints(constraint);
     const entity = checkNode(node, mapper, valueConstraint);
     if (entity === null) {
       return entity;
     } else if (isType(entity)) {
+      // some types prefer Type constraints over Values
+      if (
+        typeConstraint &&
+        prefersTypeOverValue(entity) &&
+        ignoreDiagnostics(isTypeAssignableTo(entity, typeConstraint.type, node))
+      ) {
+        return entity;
+      }
       if (valueConstraint) {
         return legacy_tryTypeToValueCast(entity, valueConstraint, node);
       } else {
@@ -1012,12 +1026,34 @@ export function createChecker(program: Program): Checker {
     return entity.type;
   }
 
+  /** Whether a Type should prefer Type over Value constraints when both are present. */
+  function prefersTypeOverValue(entity: Type): boolean {
+    switch (entity.kind) {
+      case "Model":
+      case "Tuple":
+        return true;
+      default:
+        return false;
+    }
+  }
+
   /** Extact the type constraint a value should match. */
   function extractValueOfConstraints(
     constraint: CheckConstraint | undefined
   ): CheckValueConstraint | undefined {
     if (constraint?.constraint.valueType) {
       return { kind: constraint.kind, type: constraint.constraint.valueType };
+    } else {
+      return undefined;
+    }
+  }
+
+  /** Extract the type constraint a type should match. */
+  function extractTypeOfConstraints(
+    constraint: CheckConstraint | undefined
+  ): CheckTypeConstraint | undefined {
+    if (constraint?.constraint.type) {
+      return { kind: constraint.kind, type: constraint.constraint.type };
     } else {
       return undefined;
     }
