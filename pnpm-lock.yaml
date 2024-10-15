@@ -241,6 +241,51 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@types/node@22.7.5)(@vitest/ui@2.1.2)(happy-dom@15.7.4)(jsdom@25.0.1)(terser@5.34.1)
 
+  packages/cjr-streams-demo:
+    devDependencies:
+      '@types/node':
+        specifier: ~22.7.5
+        version: 22.7.5
+      '@typespec/compiler':
+        specifier: workspace:~
+        version: link:../compiler
+      '@typespec/events':
+        specifier: workspace:~
+        version: link:../events
+      '@typespec/http':
+        specifier: workspace:~
+        version: link:../http
+      '@typespec/library-linter':
+        specifier: workspace:~
+        version: link:../library-linter
+      '@typespec/sse':
+        specifier: workspace:~
+        version: link:../sse
+      '@typespec/streams':
+        specifier: workspace:~
+        version: link:../streams
+      '@typespec/tspd':
+        specifier: workspace:~
+        version: link:../tspd
+      '@vitest/coverage-v8':
+        specifier: ^2.1.2
+        version: 2.1.2(vitest@2.1.2(@types/node@22.7.5)(@vitest/ui@2.1.2)(happy-dom@15.7.4)(jsdom@25.0.1)(terser@5.34.1))
+      '@vitest/ui':
+        specifier: ^2.1.2
+        version: 2.1.2(vitest@2.1.2)
+      c8:
+        specifier: ^10.1.2
+        version: 10.1.2
+      rimraf:
+        specifier: ~6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: ~5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: ^2.1.2
+        version: 2.1.2(@types/node@22.7.5)(@vitest/ui@2.1.2)(happy-dom@15.7.4)(jsdom@25.0.1)(terser@5.34.1)
+
   packages/compiler:
     dependencies:
       '@babel/code-frame':
@@ -617,12 +662,12 @@ importers:
       '@typespec/spec-api':
         specifier: workspace:~
         version: link:../spec-api
-      '@typespec/spector':
-        specifier: workspace:~
-        version: link:../spector
       '@typespec/spec-lib':
         specifier: workspace:~
         version: link:../spec-lib
+      '@typespec/spector':
+        specifier: workspace:~
+        version: link:../spector
       '@typespec/versioning':
         specifier: workspace:~
         version: link:../versioning
@@ -1484,6 +1529,53 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(@types/node@22.7.5)(@vitest/ui@2.1.2)(happy-dom@15.7.4)(jsdom@25.0.1)(terser@5.34.1)
 
+  packages/spec-coverage-sdk:
+    dependencies:
+      '@azure/identity':
+        specifier: ~4.4.1
+        version: 4.4.1
+      '@azure/storage-blob':
+        specifier: ~12.25.0
+        version: 12.25.0
+      '@types/node':
+        specifier: ~22.7.5
+        version: 22.7.5
+    devDependencies:
+      rimraf:
+        specifier: ~6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: ~5.6.3
+        version: 5.6.3
+
+  packages/spec-lib:
+    dependencies:
+      '@typespec/compiler':
+        specifier: workspace:~
+        version: link:../compiler
+      '@typespec/http':
+        specifier: workspace:~
+        version: link:../http
+      '@typespec/rest':
+        specifier: workspace:~
+        version: link:../rest
+      '@typespec/versioning':
+        specifier: workspace:~
+        version: link:../versioning
+    devDependencies:
+      '@types/node':
+        specifier: ~22.7.5
+        version: 22.7.5
+      '@typespec/tspd':
+        specifier: workspace:~
+        version: link:../tspd
+      rimraf:
+        specifier: ~6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: ~5.6.3
+        version: 5.6.3
+
   packages/spector:
     dependencies:
       '@azure/identity':
@@ -1592,53 +1684,6 @@ importers:
       '@types/yargs':
         specifier: ~17.0.33
         version: 17.0.33
-      rimraf:
-        specifier: ~6.0.1
-        version: 6.0.1
-      typescript:
-        specifier: ~5.6.3
-        version: 5.6.3
-
-  packages/spec-coverage-sdk:
-    dependencies:
-      '@azure/identity':
-        specifier: ~4.4.1
-        version: 4.4.1
-      '@azure/storage-blob':
-        specifier: ~12.25.0
-        version: 12.25.0
-      '@types/node':
-        specifier: ~22.7.5
-        version: 22.7.5
-    devDependencies:
-      rimraf:
-        specifier: ~6.0.1
-        version: 6.0.1
-      typescript:
-        specifier: ~5.6.3
-        version: 5.6.3
-
-  packages/spec-lib:
-    dependencies:
-      '@typespec/compiler':
-        specifier: workspace:~
-        version: link:../compiler
-      '@typespec/http':
-        specifier: workspace:~
-        version: link:../http
-      '@typespec/rest':
-        specifier: workspace:~
-        version: link:../rest
-      '@typespec/versioning':
-        specifier: workspace:~
-        version: link:../versioning
-    devDependencies:
-      '@types/node':
-        specifier: ~22.7.5
-        version: 22.7.5
-      '@typespec/tspd':
-        specifier: workspace:~
-        version: link:../tspd
       rimraf:
         specifier: ~6.0.1
         version: 6.0.1
@@ -10007,10 +10052,6 @@ packages:
     resolution: {integrity: sha512-ozCC6gdQ+glXOQsveKD0YsDy8DSQFjDTz4zyzEHNV5+JP5D62LmfDZ6o1cycFx9ouG940M5dE8C8CTewdj2YWQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  lru-cache@10.2.0:
-    resolution: {integrity: sha512-2bIM8x+VAf6JT4bKAljS1qUWgMsqZRPGJS6FSahIMPVvctcNhyVp7AJu7quxOW9jwkryBReKZY5tY5JYv2n/7Q==}
-    engines: {node: 14 || >=16.14}
-
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
@@ -17920,7 +17961,7 @@ snapshots:
   '@npmcli/git@5.0.4':
     dependencies:
       '@npmcli/promise-spawn': 7.0.1
-      lru-cache: 10.2.0
+      lru-cache: 10.4.3
       npm-pick-manifest: 9.0.0
       proc-log: 3.0.0
       promise-inflight: 1.0.1
@@ -19445,7 +19486,7 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 17.0.45
+      '@types/node': 22.7.5
 
   '@types/semver@7.5.8': {}
 
@@ -20693,7 +20734,7 @@ snapshots:
       '@npmcli/fs': 3.1.0
       fs-minipass: 3.0.3
       glob: 10.4.2
-      lru-cache: 10.2.0
+      lru-cache: 10.4.3
       minipass: 7.1.2
       minipass-collect: 2.0.1
       minipass-flush: 1.0.5
@@ -24333,8 +24374,6 @@ snapshots:
       tslib: 2.7.0
 
   lowercase-keys@3.0.0: {}
-
-  lru-cache@10.2.0: {}
 
   lru-cache@10.4.3: {}
 
