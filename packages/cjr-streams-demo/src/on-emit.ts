@@ -117,18 +117,23 @@ export async function $onEmit(context: EmitContext) {
       return bodyProperty;
     }
 
-    #emitHttpOperationParameters(operation: HttpOperation): EmitterOutput<string> {
+    #emitHttpOperationParameters(
+      operation: HttpOperation,
+      onlyBody: boolean = false,
+    ): EmitterOutput<string> {
       const signature = new StringBuilder();
 
       const requiredParams = new StringBuilder();
       const optionalParams = new StringBuilder();
 
-      for (const parameter of operation.parameters.parameters) {
-        const isOptional = parameter.param.optional;
-        const jsType = this.emitter.emitTypeReference(parameter.param.type);
-        const paramBuilder = isOptional ? optionalParams : requiredParams;
+      if (!onlyBody) {
+        for (const parameter of operation.parameters.parameters) {
+          const isOptional = parameter.param.optional;
+          const jsType = this.emitter.emitTypeReference(parameter.param.type);
+          const paramBuilder = isOptional ? optionalParams : requiredParams;
 
-        paramBuilder.push(code`${parameter.param.name}${isOptional ? "?" : ""}: ${jsType},`);
+          paramBuilder.push(code`${parameter.param.name}${isOptional ? "?" : ""}: ${jsType},`);
+        }
       }
 
       const body = operation.parameters.body;
@@ -190,6 +195,59 @@ export async function $onEmit(context: EmitContext) {
       return headersBuilder.reduce();
     }
 
+    #emitBodySerializer(operation: HttpOperation, operationName: string): EmitterOutput<string> {
+      const body = operation.parameters.body;
+      if (!body || body.bodyKind !== "single") return this.emitter.result.none();
+
+      // Get body params again - for now super simple JSON serialization?
+      const contentType = body.contentTypes?.[0] ?? "application/json";
+
+      if (contentType !== "application/json") {
+        return this.emitter.result.none();
+      }
+
+      // get params
+      const bodyType = this.#getBodyParameters(body);
+      const isExplicit = body.isExplicit;
+
+      return this.emitter.result.rawCode(
+        code`function ${this.#getSerializerName(operationName)}(${isExplicit ? "" : "...args: ["}${this.#emitHttpOperationParameters(operation, true)}${isExplicit ? "" : "]"}) {
+          ${
+            isExplicit
+              ? `return JSON.stringify(${bodyType?.name})`
+              : code`
+            const body: Record<string, any> = {};
+            for (const arg of args) {
+              Object.assign(body, arg);
+            }
+
+            return JSON.stringify(body);
+            `
+          }
+        }`,
+      );
+    }
+
+    #getSerializerName(operationName: string): string {
+      return `${operationName}Serializer`;
+    }
+
+    #getBodyParamNames(operation: HttpOperation): EmitterOutput<string> {
+      const body = operation.parameters.body;
+      if (!body) return this.emitter.result.none();
+
+      const bodyType = this.#getBodyParameters(body);
+      if (bodyType?.kind === "ModelProperty") {
+        return this.emitter.result.rawCode(code`${bodyType.name}`);
+      } else if (bodyType?.kind === "Model") {
+        return this.emitter.result.rawCode(
+          code`${Array.from(bodyType.properties.keys()).join(", ")}`,
+        );
+      }
+
+      return this.emitter.result.none();
+    }
+
     operationDeclaration(operation: Operation, name: string): EmitterOutput<string> {
       const doc = getDoc(this.emitter.getProgram(), operation);
       const [httpOperation] = getHttpOperation(this.emitter.getProgram(), operation);
@@ -206,19 +264,25 @@ export async function $onEmit(context: EmitContext) {
       }
       const headers = this.#operationHeaderParams(httpOperation);
 
+      const hasBody = Boolean(httpOperation.parameters.body);
+
       return this.emitter.result.declaration(
         name,
         code`
+          ${this.#emitBodySerializer(httpOperation, name)}
+
           ${doc ? `/** ${doc} */` : ""}
           export async function ${name}(${declParams}): Promise<void> {
             const path = parseTemplate("${httpOperation.uriTemplate}").expand({${pathParamNames.join(", ")}});
 
             ${headers}
 
+            ${/* TODO: Generate body serializers based on contentType */ ""}
+
             return fetch(\`${serverEndpoint}\${path}\`, {
               method: "${httpOperation.verb}",
               headers,
-              body: JSON.stringify({}),
+              ${hasBody ? code`body: ${this.#getSerializerName(name)}(${this.#getBodyParamNames(httpOperation)}),` : ""}
             });
           }
         `,
