@@ -66,6 +66,30 @@ export async function $onEmit(context: EmitContext) {
       return signature.reduce();
     }
 
+    #operationHeaderParams(operation: HttpOperation): EmitterOutput<string> {
+      const headerParams = operation.parameters.parameters.filter((p) => p.type === "header");
+      const requiredHeaders = headerParams.filter((p) => !p.param.optional);
+      const optionalHeaders = headerParams.filter((p) => p.param.optional);
+
+      const headersBuilder = new StringBuilder();
+      headersBuilder.pushLiteralSegment("const headers: Record<string, string> = {};\n");
+      headersBuilder.push("\n");
+
+      for (const header of requiredHeaders) {
+        headersBuilder.push(code`headers["${header.name}"] = ${header.param.name};\n`);
+      }
+
+      for (const header of optionalHeaders) {
+        headersBuilder.push(code`
+          if (${header.param.name} !== undefined) {
+            headers["${header.name}"] = ${header.param.name};\n
+          }
+        `);
+      }
+
+      return headersBuilder.reduce();
+    }
+
     operationDeclaration(operation: Operation, name: string): EmitterOutput<string> {
       const doc = getDoc(this.emitter.getProgram(), operation);
       const [httpOperation] = getHttpOperation(this.emitter.getProgram(), operation);
@@ -80,9 +104,7 @@ export async function $onEmit(context: EmitContext) {
       for (const header of httpOperation.parameters.parameters.filter((p) => p.type === "header")) {
         headerBuilder.push(code`"${header.name}": ${header.param.name},`);
       }
-      const headers = headerBuilder.segments.length
-        ? code`headers: {${headerBuilder.reduce()}}`
-        : "";
+      const headers = this.#operationHeaderParams(httpOperation);
 
       return this.emitter.result.declaration(
         name,
@@ -92,9 +114,11 @@ export async function $onEmit(context: EmitContext) {
             const pathTemplate = parseTemplate("${httpOperation.uriTemplate}");
             const path = pathTemplate.expand({${pathParamNames.join(", ")}});
 
+            ${headers}
+
             return fetch(\`${serverEndpoint}\${path}\`, {
               method: "${httpOperation.verb}",
-              ${headers},
+              headers,
               body: JSON.stringify({}),
             });
           }
