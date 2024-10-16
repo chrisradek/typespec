@@ -48,6 +48,9 @@
     "dist/**",
     "!dist/test/**"
   ],
+  "dependencies": {
+    "prettier": "~3.3.3"
+  },
   "peerDependencies": {
     "@typespec/compiler": "workspace:~",
     "@typespec/events": "workspace:~",
