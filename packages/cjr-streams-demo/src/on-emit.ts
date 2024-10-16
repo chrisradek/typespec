@@ -3,9 +3,11 @@ import {
   listServices,
   type EmitContext,
   type Model,
+  type ModelProperty,
   type Operation,
   type Program,
   type Scalar,
+  type StringLiteral,
   type Type,
 } from "@typespec/compiler";
 import {
@@ -18,7 +20,13 @@ import {
   type EmitterOutput,
   type SourceFile,
 } from "@typespec/compiler/emitter-framework";
-import { getHttpOperation, getServers, type HttpOperation } from "@typespec/http";
+import {
+  getHttpOperation,
+  getServers,
+  type HttpOperation,
+  type HttpOperationBody,
+  type HttpOperationMultipartBody,
+} from "@typespec/http";
 import * as prettier from "prettier";
 import { getBoilerplateFiles } from "./boilerplate.js";
 import { getJsTypeForScalar } from "./scalars.js";
@@ -47,22 +55,105 @@ export async function $onEmit(context: EmitContext) {
       return getJsTypeForScalar(this.emitter.getProgram(), scalar);
     }
 
+    stringLiteral(string: StringLiteral): EmitterOutput<string> {
+      return this.emitter.result.rawCode(code`"${string.value}"`);
+    }
+
+    modelDeclaration(model: Model, name: string): EmitterOutput<string> {
+      const doc = getDoc(this.emitter.getProgram(), model);
+
+      const baseModel = model.baseModel;
+
+      return this.emitter.result.declaration(
+        name,
+        code`
+          ${doc ? `/** ${doc} */` : ""}
+          export interface ${name}${baseModel ? ` extends ${baseModel.name}` : ""} {
+            ${this.emitter.emitModelProperties(model)}
+          }
+        `,
+      );
+    }
+
+    modelPropertyLiteral(property: ModelProperty): EmitterOutput<string> {
+      const doc = getDoc(this.emitter.getProgram(), property);
+
+      return this.emitter.result.rawCode(
+        code`
+          ${doc ? `/** ${doc} */` : ""}
+          ${property.name}${property.optional ? "?" : ""}: ${this.emitter.emitTypeReference(
+            property.type,
+          )}
+        `,
+      );
+    }
+
+    modelPropertyReference(property: ModelProperty): EmitterOutput<string> {
+      const doc = getDoc(this.emitter.getProgram(), property);
+
+      return this.emitter.result.rawCode(
+        code`
+          ${doc ? `/** ${doc} */` : ""}
+          ${property.name}: ${this.emitter.emitTypeReference(property.type)}
+        `,
+      );
+    }
+
     arrayLiteral(array: Model, elementType: Type): EmitterOutput<string> {
       return this.emitter.result.rawCode(code`${this.emitter.emitTypeReference(elementType)}[]`);
+    }
+
+    #getBodyParameters(body: HttpOperationBody | HttpOperationMultipartBody) {
+      const bodyProperty = body.property;
+      if (!bodyProperty) {
+        // hits this when body is not explicit
+        if (body.type.kind === "Model") {
+          return body.type;
+        }
+        return;
+      }
+
+      // Hits this when body is decorated with @body
+      return bodyProperty;
     }
 
     #emitHttpOperationParameters(operation: HttpOperation): EmitterOutput<string> {
       const signature = new StringBuilder();
 
+      const requiredParams = new StringBuilder();
+      const optionalParams = new StringBuilder();
+
       for (const parameter of operation.parameters.parameters) {
         const isOptional = parameter.param.optional;
         const jsType = this.emitter.emitTypeReference(parameter.param.type);
+        const paramBuilder = isOptional ? optionalParams : requiredParams;
 
-        signature.push(code`${parameter.param.name}${isOptional ? "?" : ""}: ${jsType},`);
+        paramBuilder.push(code`${parameter.param.name}${isOptional ? "?" : ""}: ${jsType},`);
       }
 
-      // TODO: headers
+      const body = operation.parameters.body;
+      if (body) {
+        // emit type reference for each property
+        const bodyType = this.#getBodyParameters(body);
+        if (bodyType?.kind === "ModelProperty") {
+          const isOptional = bodyType.optional;
+          const jsType = this.emitter.emitTypeReference(bodyType.type);
+          const paramBuilder = isOptional ? optionalParams : requiredParams;
 
+          paramBuilder.push(code`${bodyType.name}${isOptional ? "?" : ""}: ${jsType},`);
+        } else if (bodyType?.kind === "Model") {
+          for (const prop of bodyType.properties.values()) {
+            const isOptional = prop.optional;
+            const jsType = this.emitter.emitTypeReference(prop.type);
+            const paramBuilder = isOptional ? optionalParams : requiredParams;
+
+            paramBuilder.push(code`${prop.name}${isOptional ? "?" : ""}: ${jsType},`);
+          }
+        }
+      }
+
+      signature.pushStringBuilder(requiredParams);
+      signature.pushStringBuilder(optionalParams);
       return signature.reduce();
     }
 
@@ -85,6 +176,15 @@ export async function $onEmit(context: EmitContext) {
             headers["${header.name}"] = ${header.param.name};\n
           }
         `);
+      }
+
+      // Check if content-type existed...
+      if (!headerParams.find((p) => p.name.toLowerCase() === "content-type")) {
+        // get it from the body
+        const body = operation.parameters.body;
+        if (body?.contentTypes) {
+          headersBuilder.push(code`headers["Content-Type"] = "${body.contentTypes[0]}";`);
+        }
       }
 
       return headersBuilder.reduce();
@@ -111,8 +211,7 @@ export async function $onEmit(context: EmitContext) {
         code`
           ${doc ? `/** ${doc} */` : ""}
           export async function ${name}(${declParams}): Promise<void> {
-            const pathTemplate = parseTemplate("${httpOperation.uriTemplate}");
-            const path = pathTemplate.expand({${pathParamNames.join(", ")}});
+            const path = parseTemplate("${httpOperation.uriTemplate}").expand({${pathParamNames.join(", ")}});
 
             ${headers}
 
