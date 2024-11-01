@@ -109,6 +109,7 @@ import {
   OpenAPI3ServiceRecord,
   OpenAPI3StatusCode,
   OpenAPI3VersionedServiceRecord,
+  OpenAPIDocument3_1,
   Refable,
 } from "./types.js";
 import { deepEquals, isSharedHttpOperation, SharedHttpOperation } from "./util.js";
@@ -224,7 +225,7 @@ function createOAPIEmitter(
   let program = context.program;
   let schemaEmitter: AssetEmitter<OpenAPI3Schema, OpenAPI3EmitterOptions>;
 
-  let root: OpenAPI3Document;
+  let root: OpenAPI3Document | OpenAPIDocument3_1;
   let diagnostics: DiagnosticCollector;
   let currentService: Service;
   let serviceAuth: HttpServiceAuthentication;
@@ -328,27 +329,11 @@ function createOAPIEmitter(
     const securitySchemes = getOpenAPISecuritySchemes(allHttpAuthentications);
     const security = getOpenAPISecurity(defaultAuth);
 
-    const info = resolveInfo(program, service.type);
-    root = {
-      openapi: "3.0.0",
-      info: {
-        title: "(title)",
-        ...info,
-        version: version ?? info?.version ?? "0.0.0",
-      },
-      externalDocs: getExternalDocs(program, service.type),
-      tags: [],
-      paths: {},
-      security: security.length > 0 ? security : undefined,
-      components: {
-        parameters: {},
-        requestBodies: {},
-        responses: {},
-        schemas: {},
-        examples: {},
-        securitySchemes: securitySchemes,
-      },
-    };
+    root = createRoot(program, service.type, specVersion, version);
+    if (security.length > 0) {
+      root.security = security;
+    }
+    root.components!.securitySchemes = securitySchemes;
 
     const servers = getServers(program, service.type);
     if (servers) {
@@ -628,7 +613,7 @@ function createOAPIEmitter(
   async function getOpenApiFromVersion(
     service: Service,
     version?: string,
-  ): Promise<[OpenAPI3Document, Readonly<Diagnostic[]>] | undefined> {
+  ): Promise<[OpenAPI3Document | OpenAPIDocument3_1, Readonly<Diagnostic[]>] | undefined> {
     try {
       const httpService = ignoreDiagnostics(getHttpService(program, service.type));
       const auth = (serviceAuth = resolveAuthentication(httpService));
@@ -1801,7 +1786,10 @@ function createOAPIEmitter(
   }
 }
 
-function serializeDocument(root: OpenAPI3Document, fileType: FileType): string {
+function serializeDocument(
+  root: OpenAPI3Document | OpenAPIDocument3_1,
+  fileType: FileType,
+): string {
   sortOpenAPIDocument(root);
   switch (fileType) {
     case "json":
@@ -1834,12 +1822,52 @@ function sortObjectByKeys<T extends Record<string, unknown>>(obj: T): T {
     }, {});
 }
 
-function sortOpenAPIDocument(doc: OpenAPI3Document): void {
+function sortOpenAPIDocument(doc: OpenAPI3Document | OpenAPIDocument3_1): void {
   doc.paths = sortObjectByKeys(doc.paths);
   if (doc.components?.schemas) {
     doc.components.schemas = sortObjectByKeys(doc.components.schemas);
   }
   if (doc.components?.parameters) {
     doc.components.parameters = sortObjectByKeys(doc.components.parameters);
+  }
+}
+
+function createRoot(
+  program: Program,
+  serviceType: Namespace,
+  specVersion: OutputSpecVersions,
+  serviceVersion?: string,
+): OpenAPI3Document | OpenAPIDocument3_1 {
+  const info = resolveInfo(program, serviceType);
+
+  return {
+    openapi: getOpenApiVersion(specVersion),
+    info: {
+      title: "(title)",
+      ...info,
+      version: serviceVersion ?? info?.version ?? "0.0.0",
+    },
+    externalDocs: getExternalDocs(program, serviceType),
+    tags: [],
+    paths: {},
+    security: undefined,
+    components: {
+      parameters: {},
+      requestBodies: {},
+      responses: {},
+      schemas: {},
+      examples: {},
+      securitySchemes: {},
+    },
+  };
+}
+
+type OpenApiVersions = "3.0.0" | "3.1.0";
+function getOpenApiVersion(specVersion: OutputSpecVersions): OpenApiVersions {
+  switch (specVersion) {
+    case "v3.0":
+      return "3.0.0";
+    case "v3.1":
+      return "3.1.0";
   }
 }

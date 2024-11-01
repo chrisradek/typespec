@@ -50,3 +50,12 @@ it("defaults to 3.0.0 if not specified", async () => {
   const doc = JSON.parse(content);
   expect(doc.openapi).toBe("3.0.0");
 });
+
+it("supports v3.1", async () => {
+  await compileOpenAPI({ "output-spec-versions": ["v3.1"], "file-type": "json" });
+  const outPath = resolvePath(outputDir, "openapi.json");
+  const content = runner.fs.get(outPath);
+  ok(content, `Expected ${outPath} to exist.`);
+  const doc = JSON.parse(content);
+  expect(doc.openapi).toBe("3.1.0");
+});
