@@ -117,15 +117,23 @@ export async function checkFor(code: string) {
   return await host.diagnose(code);
 }
 
-export async function oapiForModel(name: string, modelDef: string) {
-  const oapi = await openApiFor(`
+export async function oapiForModel(
+  name: string,
+  modelDef: string,
+  options: OpenAPI3EmitterOptions = {},
+) {
+  const oapi = await openApiFor(
+    `
     ${modelDef};
     @service({title: "Testing model"})
     @route("/")
     namespace root {
       op read(): { @body body: ${name} };
     }
-  `);
+  `,
+    undefined,
+    options,
+  );
 
   const useSchema = oapi.paths["/"].get.responses[200].content["application/json"].schema;
 

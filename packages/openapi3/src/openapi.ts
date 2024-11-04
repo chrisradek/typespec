@@ -44,7 +44,12 @@ import {
   TypeNameOptions,
 } from "@typespec/compiler";
 
-import { AssetEmitter, createAssetEmitter, EmitEntity } from "@typespec/compiler/emitter-framework";
+import {
+  AssetEmitter,
+  createAssetEmitter,
+  EmitEntity,
+  TypeEmitter,
+} from "@typespec/compiler/emitter-framework";
 import {} from "@typespec/compiler/utils";
 import {
   AuthenticationOptionReference,
@@ -89,7 +94,12 @@ import { getRef } from "./decorators.js";
 import { applyEncoding } from "./encoding.js";
 import { getExampleOrExamples, OperationExamples, resolveOperationExamples } from "./examples.js";
 import { createDiagnostic, FileType, OpenAPI3EmitterOptions, OpenAPIVersion } from "./lib.js";
-import { getDefaultValue, isBytesKeptRaw, OpenAPI3SchemaEmitter } from "./schema-emitter.js";
+import { createWrappedOpenAPI31SchemaEmitterClass } from "./schema-emitter-3-1.js";
+import {
+  createWrappedOpenAPI3SchemaEmitterClass,
+  getDefaultValue,
+  isBytesKeptRaw,
+} from "./schema-emitter.js";
 import { getOpenAPI3StatusCodes } from "./status-codes.js";
 import {
   OpenAPI3Document,
@@ -127,7 +137,7 @@ const defaultOptions = {
 export async function $onEmit(context: EmitContext<OpenAPI3EmitterOptions>) {
   const options = resolveOptions(context);
   for (const specVersion of options.openapiVersions) {
-    const emitter = createOAPIEmitter(context, options, specVersion);
+    const emitter = createOAPIEmitter(context, options, getOpenApiSpecSpecificProps(specVersion));
     await emitter.emitOpenAPI();
   }
 }
@@ -161,7 +171,11 @@ export async function getOpenAPI3(
   const resolvedOptions = resolveOptions(context);
   const serviceRecords: OpenAPI3ServiceRecord[] = [];
   for (const specVersion of resolvedOptions.openapiVersions) {
-    const emitter = createOAPIEmitter(context, resolvedOptions, specVersion);
+    const emitter = createOAPIEmitter(
+      context,
+      resolvedOptions,
+      getOpenApiSpecSpecificProps(specVersion),
+    );
     serviceRecords.push(...(await emitter.getOpenAPI()));
   }
   return serviceRecords;
@@ -217,10 +231,37 @@ export interface ResolvedOpenAPI3EmitterOptions {
   safeintStrategy: "double-int" | "int64";
 }
 
+type OpenApiSpecSpecificProps = {
+  specVersion: OpenAPIVersion;
+  createSchemaEmitterCtor: (
+    metadataInfo: MetadataInfo,
+    visibilityUsage: VisibilityUsageTracker,
+    options: ResolvedOpenAPI3EmitterOptions,
+    xmlModule: XmlModule | undefined,
+  ) => typeof TypeEmitter<Record<string, any>, OpenAPI3EmitterOptions>;
+};
+
+function getOpenApiSpecSpecificProps(specVersion: OpenAPIVersion): OpenApiSpecSpecificProps {
+  switch (specVersion) {
+    case "3.0.0":
+      return {
+        specVersion,
+        createSchemaEmitterCtor: createWrappedOpenAPI3SchemaEmitterClass,
+      };
+    case "3.1.0":
+      return {
+        specVersion,
+        createSchemaEmitterCtor: createWrappedOpenAPI31SchemaEmitterClass,
+      };
+  }
+}
+
 function createOAPIEmitter(
   context: EmitContext<OpenAPI3EmitterOptions>,
   options: ResolvedOpenAPI3EmitterOptions,
-  specVersion: OpenAPIVersion = "3.0.0",
+  { specVersion, createSchemaEmitterCtor }: OpenApiSpecSpecificProps = getOpenApiSpecSpecificProps(
+    "3.0.0",
+  ),
 ) {
   let program = context.program;
   let schemaEmitter: AssetEmitter<OpenAPI3Schema, OpenAPI3EmitterOptions>;
@@ -318,11 +359,7 @@ function createOAPIEmitter(
 
     schemaEmitter = createAssetEmitter(
       program,
-      class extends OpenAPI3SchemaEmitter {
-        constructor(emitter: AssetEmitter<Record<string, any>, OpenAPI3EmitterOptions>) {
-          super(emitter, metadataInfo, visibilityUsage, options, xmlModule);
-        }
-      } as any,
+      createSchemaEmitterCtor(metadataInfo, visibilityUsage, options, xmlModule),
       context,
     );
 
@@ -1835,13 +1872,13 @@ function sortOpenAPIDocument(doc: OpenAPI3Document | OpenAPIDocument3_1): void {
 function createRoot(
   program: Program,
   serviceType: Namespace,
-  specVersion: OutputSpecVersions,
+  specVersion: OpenAPIVersion,
   serviceVersion?: string,
 ): OpenAPI3Document | OpenAPIDocument3_1 {
   const info = resolveInfo(program, serviceType);
 
   return {
-    openapi: getOpenApiVersion(specVersion),
+    openapi: specVersion,
     info: {
       title: "(title)",
       ...info,
@@ -1860,14 +1897,4 @@ function createRoot(
       securitySchemes: {},
     },
   };
-}
-
-type OpenApiVersions = "3.0.0" | "3.1.0";
-function getOpenApiVersion(specVersion: OutputSpecVersions): OpenApiVersions {
-  switch (specVersion) {
-    case "v3.0":
-      return "3.0.0";
-    case "v3.1":
-      return "3.1.0";
-  }
 }

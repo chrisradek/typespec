@@ -47,6 +47,32 @@ describe("openapi3: primitives", () => {
         deepStrictEqual(schema, expectedSchema);
       });
     }
+
+    it(`OpenAPI 3.0.0: handle type null`, async () => {
+      const res = await oapiForModel(
+        "Pet",
+        `
+        model Pet { name: null };
+        `,
+        { "openapi-versions": ["3.0.0"] },
+      );
+
+      const schema = res.schemas.Pet.properties.name;
+      deepStrictEqual(schema, { nullable: true });
+    });
+
+    it(`OpenAPI 3.1.0: handle type null`, async () => {
+      const res = await oapiForModel(
+        "Pet",
+        `
+        model Pet { name: null };
+        `,
+        { "openapi-versions": ["3.1.0"] },
+      );
+
+      const schema = res.schemas.Pet.properties.name;
+      deepStrictEqual(schema, { type: "null" });
+    });
   });
 
   describe("safeint-strategy", () => {

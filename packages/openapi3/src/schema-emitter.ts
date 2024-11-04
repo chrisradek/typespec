@@ -86,6 +86,19 @@ import {
 import { VisibilityUsageTracker } from "./visibility-usage.js";
 import { XmlModule } from "./xml-module.js";
 
+export function createWrappedOpenAPI3SchemaEmitterClass(
+  metadataInfo: MetadataInfo,
+  visibilityUsage: VisibilityUsageTracker,
+  options: ResolvedOpenAPI3EmitterOptions,
+  xmlModule: XmlModule | undefined,
+): typeof TypeEmitter<Record<string, any>, OpenAPI3EmitterOptions> {
+  return class extends OpenAPI3SchemaEmitter {
+    constructor(emitter: AssetEmitter<Record<string, any>, OpenAPI3EmitterOptions>) {
+      super(emitter, metadataInfo, visibilityUsage, options, xmlModule);
+    }
+  };
+}
+
 /**
  * OpenAPI3 schema emitter. Deals with emitting content of `components/schemas` section.
  */
@@ -137,7 +150,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
     if (visibility !== Visibility.Read && !this.#metadataInfo.isTransformed(type, visibility)) {
       patch.visibility = Visibility.Read;
     }
-    const contentType = this.#getContentType();
+    const contentType = this.getContentType();
 
     if (contentType === "application/json") {
       patch.contentType = undefined;
@@ -184,7 +197,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
     }
 
     const baseName = getOpenAPITypeName(program, model, this.#typeNameOptions());
-    const isMultipart = this.#getContentType().startsWith("multipart/");
+    const isMultipart = this.getContentType().startsWith("multipart/");
     const name = isMultipart ? baseName + "MultiPart" : baseName;
     return this.#createDeclaration(model, name, this.#applyConstraints(model, schema));
   }
@@ -215,7 +228,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
     return this.emitter.getContext().ignoreMetadataAnnotations;
   }
 
-  #getContentType(): string {
+  getContentType(): string {
     return this.emitter.getContext().contentType ?? "application/json";
   }
 
@@ -292,7 +305,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
         const encodedName = resolveEncodedName(
           this.emitter.getProgram(),
           prop,
-          this.#getContentType(),
+          this.getContentType(),
         );
 
         requiredProps.push(encodedName);
@@ -313,7 +326,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
     const program = this.emitter.getProgram();
     const props = new ObjectBuilder();
     const visibility = this.emitter.getContext().visibility;
-    const contentType = this.#getContentType();
+    const contentType = this.getContentType();
 
     for (const prop of model.properties.values()) {
       if (isNeverType(prop.type)) {
@@ -347,7 +360,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
 
   modelPropertyLiteral(prop: ModelProperty): EmitterOutput<object> {
     const program = this.emitter.getProgram();
-    const isMultipart = this.#getContentType().startsWith("multipart/");
+    const isMultipart = this.getContentType().startsWith("multipart/");
     if (isMultipart) {
       if (isBytesKeptRaw(program, prop.type) && getEncode(program, prop) === undefined) {
         return { type: "string", format: "binary" };
@@ -514,7 +527,7 @@ export class OpenAPI3SchemaEmitter extends TypeEmitter<
     const schemaMembers: { schema: any; type: Type | null }[] = [];
     let nullable = false;
     const discriminator = getDiscriminator(program, union);
-    const isMultipart = this.#getContentType().startsWith("multipart/");
+    const isMultipart = this.getContentType().startsWith("multipart/");
 
     for (const variant of variants) {
       if (isNullType(variant.type)) {
