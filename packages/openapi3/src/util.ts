@@ -1,3 +1,14 @@
+import {
+  BooleanLiteral,
+  IntrinsicScalarName,
+  isTemplateDeclaration,
+  Model,
+  NumericLiteral,
+  Program,
+  Scalar,
+  StringLiteral,
+  Type,
+} from "@typespec/compiler";
 import { HttpOperation } from "@typespec/http";
 
 /**
@@ -86,4 +97,35 @@ export function isSharedHttpOperation(
   operation: HttpOperation | SharedHttpOperation,
 ): operation is SharedHttpOperation {
   return (operation as SharedHttpOperation).kind === "shared";
+}
+
+export function isStdType(
+  program: Program,
+  type: Type,
+): type is Scalar & { name: IntrinsicScalarName } {
+  return program.checker.isStdType(type);
+}
+
+export function isLiteralType(type: Type): type is StringLiteral | NumericLiteral | BooleanLiteral {
+  return type.kind === "Boolean" || type.kind === "String" || type.kind === "Number";
+}
+
+export function literalType(type: StringLiteral | NumericLiteral | BooleanLiteral) {
+  switch (type.kind) {
+    case "String":
+      return "string";
+    case "Number":
+      return "number";
+    case "Boolean":
+      return "boolean";
+  }
+}
+
+export function includeDerivedModel(model: Model): boolean {
+  return (
+    !isTemplateDeclaration(model) &&
+    (model.templateMapper?.args === undefined ||
+      model.templateMapper.args?.length === 0 ||
+      model.derivedModels.length > 0)
+  );
 }

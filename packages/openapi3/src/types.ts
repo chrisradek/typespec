@@ -1071,5 +1071,12 @@ export type OpenAPISchema3_1 = JsonSchema<
      * @see https://spec.openapis.org/oas/v3.1.1.html#external-documentation-object
      */
     externalDocs?: OpenAPI3ExternalDocs;
+
+    /**
+     * This MAY be used only on properties schemas.
+     * It has no effect on root schemas.
+     * Adds additional metadata to describe the XML representation of this property.
+     */
+    xml?: OpenAPI3XmlSchema;
   } & Extensions
 >;

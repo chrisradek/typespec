@@ -79,7 +79,6 @@ import {
   Visibility,
 } from "@typespec/http";
 import {
-  getExtensions,
   getExternalDocs,
   getOpenAPITypeName,
   getParameterKey,
@@ -90,6 +89,7 @@ import {
 } from "@typespec/openapi";
 import { buildVersionProjections, VersionProjections } from "@typespec/versioning";
 import { stringify } from "yaml";
+import { attachExtensions } from "./attach-extensions.js";
 import { getRef } from "./decorators.js";
 import { applyEncoding } from "./encoding.js";
 import { getExampleOrExamples, OperationExamples, resolveOperationExamples } from "./examples.js";
@@ -1630,16 +1630,6 @@ function createOAPIEmitter(
 
   function getSchemaForType(type: Type, visibility: Visibility): OpenAPI3Schema | undefined {
     return callSchemaEmitter(type, visibility) as any;
-  }
-
-  function attachExtensions(program: Program, type: Type, emitObject: any) {
-    // Attach any OpenAPI extensions
-    const extensions = getExtensions(program, type);
-    if (extensions) {
-      for (const key of extensions.keys()) {
-        emitObject[key] = extensions.get(key);
-      }
-    }
   }
 
   function applyIntrinsicDecorators(typespecType: Type, target: OpenAPI3Schema): OpenAPI3Schema {

@@ -143,3 +143,20 @@ export async function oapiForModel(
     schemas: oapi.components.schemas || {},
   };
 }
+
+export const OpenAPIVersionHelpers = [
+  {
+    version: "3.0.0",
+    oapiForModel: (name: string, modelDef: string) =>
+      oapiForModel(name, modelDef, { "openapi-versions": ["3.0.0"] }),
+    openApiFor: (code: string, versions?: string[]) =>
+      openApiFor(code, versions, { "openapi-versions": ["3.0.0"] }),
+  },
+  {
+    version: "3.1.0",
+    oapiForModel: (name: string, modelDef: string) =>
+      oapiForModel(name, modelDef, { "openapi-versions": ["3.1.0"] }),
+    openApiFor: (code: string, versions?: string[]) =>
+      openApiFor(code, versions, { "openapi-versions": ["3.1.0"] }),
+  },
+];
