@@ -1,8 +1,8 @@
 import { deepStrictEqual, strictEqual } from "assert";
 import { describe, it } from "vitest";
-import { openApiFor } from "./test-host.js";
+import { openApiFor, OpenAPIVersionHelpers } from "./test-host.js";
 
-describe("openapi3: documentation", () => {
+describe.each(OpenAPIVersionHelpers)("openapi $version: documentation", () => {
   it("supports summary and description", async () => {
     const openApi = await openApiFor(`
       @summary("This is a summary")

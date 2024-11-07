@@ -1,9 +1,9 @@
 import { expectDiagnostics } from "@typespec/compiler/testing";
 import { deepStrictEqual, ok, strictEqual } from "assert";
 import { describe, expect, it } from "vitest";
-import { diagnoseOpenApiFor, oapiForModel, openApiFor } from "./test-host.js";
+import { diagnoseOpenApiFor, OpenAPIVersionHelpers } from "./test-host.js";
 
-describe("openapi3: models", () => {
+describe.each(OpenAPIVersionHelpers)("openapi $version: models", ({ oapiForModel, openApiFor }) => {
   it("defines models", async () => {
     const res = await oapiForModel(
       "Foo",
@@ -231,29 +231,6 @@ describe("openapi3: models", () => {
         optionalUnion: {
           allOf: [{ $ref: "#/components/schemas/MyUnion" }],
           default: "a-value",
-        },
-      },
-    });
-  });
-
-  it("specify default value on nullable property", async () => {
-    const res = await oapiForModel(
-      "Foo",
-      `
-      model Foo {
-        optional?: string | null = null;
-      };
-      `,
-    );
-
-    ok(res.schemas.Foo, "expected definition named Foo");
-    deepStrictEqual(res.schemas.Foo, {
-      type: "object",
-      properties: {
-        optional: {
-          type: "string",
-          nullable: true,
-          default: null,
         },
       },
     });
@@ -611,54 +588,6 @@ describe("openapi3: models", () => {
     strictEqual(res.schemas.Pet.properties.type.$ref, "#/components/schemas/PetType");
     deepStrictEqual(res.schemas.PetType, {
       oneOf: [{ type: "string" }, { type: "string", enum: ["Dog", "Cat"] }],
-    });
-  });
-
-  it("defines nullable properties", async () => {
-    const res = await oapiForModel(
-      "Pet",
-      `
-      model Pet {
-        name: string | null;
-      };
-      `,
-    );
-    ok(res.isRef);
-    deepStrictEqual(res.schemas.Pet, {
-      type: "object",
-      properties: {
-        name: {
-          type: "string",
-          nullable: true,
-        },
-      },
-      required: ["name"],
-    });
-  });
-
-  it("defines nullable array", async () => {
-    const res = await oapiForModel(
-      "Pet",
-      `
-      model Pet {
-        name: int32[] | null;
-      };
-      `,
-    );
-    ok(res.isRef);
-    deepStrictEqual(res.schemas.Pet, {
-      type: "object",
-      properties: {
-        name: {
-          type: "array",
-          items: {
-            type: "integer",
-            format: "int32",
-          },
-          nullable: true,
-        },
-      },
-      required: ["name"],
     });
   });
 
@@ -1075,6 +1004,156 @@ describe("openapi3: models", () => {
         allOf: [{ $ref: "#/components/schemas/Foo" }],
         description: "Some doc",
       });
+    });
+  });
+});
+
+describe("openapi 3.0.0 nullable", () => {
+  const { oapiForModel } = OpenAPIVersionHelpers.find((v) => v.version === "3.0.0")!;
+  it("specify default value on nullable property", async () => {
+    const res = await oapiForModel(
+      "Foo",
+      `
+      model Foo {
+        optional?: string | null = null;
+      };
+      `,
+    );
+
+    ok(res.schemas.Foo, "expected definition named Foo");
+    deepStrictEqual(res.schemas.Foo, {
+      type: "object",
+      properties: {
+        optional: {
+          type: "string",
+          nullable: true,
+          default: null,
+        },
+      },
+    });
+  });
+
+  it("defines nullable properties", async () => {
+    const res = await oapiForModel(
+      "Pet",
+      `
+      model Pet {
+        name: string | null;
+      };
+      `,
+    );
+    ok(res.isRef);
+    deepStrictEqual(res.schemas.Pet, {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          nullable: true,
+        },
+      },
+      required: ["name"],
+    });
+  });
+
+  it("defines nullable array", async () => {
+    const res = await oapiForModel(
+      "Pet",
+      `
+      model Pet {
+        name: int32[] | null;
+      };
+      `,
+    );
+    ok(res.isRef);
+    deepStrictEqual(res.schemas.Pet, {
+      type: "object",
+      properties: {
+        name: {
+          type: "array",
+          items: {
+            type: "integer",
+            format: "int32",
+          },
+          nullable: true,
+        },
+      },
+      required: ["name"],
+    });
+  });
+});
+
+describe("openapi 3.1.0 nullable", () => {
+  const { oapiForModel } = OpenAPIVersionHelpers.find((v) => v.version === "3.1.0")!;
+  it("specify default value on nullable property", async () => {
+    const res = await oapiForModel(
+      "Foo",
+      `
+      model Foo {
+        optional?: string | null = null;
+      };
+      `,
+    );
+
+    ok(res.schemas.Foo, "expected definition named Foo");
+    deepStrictEqual(res.schemas.Foo, {
+      type: "object",
+      properties: {
+        optional: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+          default: null,
+        },
+      },
+    });
+  });
+
+  it("defines nullable properties", async () => {
+    const res = await oapiForModel(
+      "Pet",
+      `
+      model Pet {
+        name: string | null;
+      };
+      `,
+    );
+    ok(res.isRef);
+    deepStrictEqual(res.schemas.Pet, {
+      type: "object",
+      properties: {
+        name: {
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+      },
+      required: ["name"],
+    });
+  });
+
+  it("defines nullable array", async () => {
+    const res = await oapiForModel(
+      "Pet",
+      `
+      model Pet {
+        name: int32[] | null;
+      };
+      `,
+    );
+    ok(res.isRef);
+    deepStrictEqual(res.schemas.Pet, {
+      type: "object",
+      properties: {
+        name: {
+          anyOf: [
+            {
+              type: "array",
+              items: {
+                type: "integer",
+                format: "int32",
+              },
+            },
+            { type: "null" },
+          ],
+        },
+      },
+      required: ["name"],
     });
   });
 });

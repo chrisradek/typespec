@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { OpenAPI3PathParameter, OpenAPI3QueryParameter } from "../src/types.js";
 import { diagnoseOpenApiFor, OpenAPIVersionHelpers } from "./test-host.js";
 
-describe.each(OpenAPIVersionHelpers)("Open API $version", ({ oapiForModel, openApiFor }) => {
+describe.each(OpenAPIVersionHelpers)("Open API $version", ({ openApiFor }) => {
   describe("query parameters", () => {
     async function getQueryParam(code: string): Promise<OpenAPI3QueryParameter> {
       const res = await openApiFor(code);

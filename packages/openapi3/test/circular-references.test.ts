@@ -1,8 +1,8 @@
 import { deepStrictEqual } from "assert";
 import { describe, it } from "vitest";
-import { oapiForModel } from "./test-host.js";
+import { OpenAPIVersionHelpers } from "./test-host.js";
 
-describe("openapi3: circular reference", () => {
+describe.each(OpenAPIVersionHelpers)("openapi $version", ({ oapiForModel, openApiFor }) => {
   it("can reference itself via a property", async () => {
     const res = await oapiForModel(
       "Pet",

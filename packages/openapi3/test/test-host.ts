@@ -147,16 +147,16 @@ export async function oapiForModel(
 export const OpenAPIVersionHelpers = [
   {
     version: "3.0.0",
-    oapiForModel: (name: string, modelDef: string) =>
-      oapiForModel(name, modelDef, { "openapi-versions": ["3.0.0"] }),
-    openApiFor: (code: string, versions?: string[]) =>
-      openApiFor(code, versions, { "openapi-versions": ["3.0.0"] }),
+    oapiForModel: (...[name, modelDef, options]: Parameters<typeof oapiForModel>) =>
+      oapiForModel(name, modelDef, { ...options, "openapi-versions": ["3.0.0"] }),
+    openApiFor: (...[code, versions, options]: Parameters<typeof openApiFor>) =>
+      openApiFor(code, versions, { ...options, "openapi-versions": ["3.0.0"] }),
   },
   {
     version: "3.1.0",
-    oapiForModel: (name: string, modelDef: string) =>
-      oapiForModel(name, modelDef, { "openapi-versions": ["3.1.0"] }),
-    openApiFor: (code: string, versions?: string[]) =>
-      openApiFor(code, versions, { "openapi-versions": ["3.1.0"] }),
+    oapiForModel: (...[name, modelDef, options]: Parameters<typeof oapiForModel>) =>
+      oapiForModel(name, modelDef, { ...options, "openapi-versions": ["3.1.0"] }),
+    openApiFor: (...[code, versions, options]: Parameters<typeof openApiFor>) =>
+      openApiFor(code, versions, { ...options, "openapi-versions": ["3.1.0"] }),
   },
 ];
