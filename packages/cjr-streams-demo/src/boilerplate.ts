@@ -18,6 +18,11 @@ export function getBoilerplateFiles(
       getContents: getTSConfig,
       emitter,
     }),
+    createSourceFile({
+      filename: "jsonl-splitter.ts",
+      getContents: getJsonlSplitter,
+      emitter,
+    }),
   ];
 }
 
@@ -86,4 +91,41 @@ function getTSConfig(): string {
     null,
     2,
   );
+}
+
+function getJsonlSplitter(): string {
+  return `
+  export class JsonlSplitterStream extends TransformStream<string, JSON> {
+    constructor() {
+      let buffer = "";
+      /** @type {string} */
+      super({
+        /**
+         *
+         * @param {string} chunk
+         * @param {TransformStreamDefaultController} controller
+         */
+        async transform(chunk, controller) {
+          buffer += chunk;
+
+          const events = buffer.split("\\n");
+
+          // If the buffer ends with "\\n" then we have full events.
+          // The last element of the split should be an empty string.
+          // Otherwise, the last element is a partial event, so should
+          // replace the buffer.
+          if (events[-1]) {
+            buffer = events.pop()!;
+          } else {
+            buffer = "";
+            events.pop();
+          }
+
+          for (const event of events) {
+            controller.enqueue(JSON.parse(event));
+          }
+        },
+      });
+    }
+  }`;
 }

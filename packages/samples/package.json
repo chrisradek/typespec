@@ -44,6 +44,7 @@
   ],
   "dependencies": {
     "@typespec/best-practices": "workspace:~",
+    "@typespec/cjr-streams-demo": "workspace:~",
     "@typespec/compiler": "workspace:~",
     "@typespec/events": "workspace:~",
     "@typespec/html-program-viewer": "workspace:~",

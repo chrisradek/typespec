@@ -2,13 +2,17 @@ import {
   getDoc,
   listServices,
   type EmitContext,
+  type IntrinsicType,
   type Model,
   type ModelProperty,
+  type NumericLiteral,
   type Operation,
   type Program,
   type Scalar,
   type StringLiteral,
   type Type,
+  type Union,
+  type UnionVariant,
 } from "@typespec/compiler";
 import {
   code,
@@ -20,6 +24,7 @@ import {
   type EmitterOutput,
   type SourceFile,
 } from "@typespec/compiler/emitter-framework";
+import { unsafe_getEventDefinitions } from "@typespec/events/experimental";
 import {
   getHttpOperation,
   getServers,
@@ -27,15 +32,15 @@ import {
   type HttpOperationBody,
   type HttpOperationMultipartBody,
 } from "@typespec/http";
+import { getStreamOf, isStream } from "@typespec/streams";
 import * as prettier from "prettier";
 import { getBoilerplateFiles } from "./boilerplate.js";
+import { flattenResponses } from "./http.js";
 import { getJsTypeForScalar } from "./scalars.js";
 import { ensureCleanDirectory } from "./utils.js";
-
 export async function $onEmit(context: EmitContext) {
   const services = listServices(context.program);
   const [service] = services;
-  const globalNamespace = context.program.getGlobalNamespaceType();
   const servers = getServers(context.program, service.type);
   const serverEndpoint = servers![0].url;
 
@@ -45,10 +50,15 @@ export async function $onEmit(context: EmitContext) {
       const sourceFile = this.emitter.createSourceFile(`index.ts`);
       sourceFile.meta["filetype"] = "typescript";
       sourceFile.imports.set("url-template", ["parseTemplate"]);
+      sourceFile.imports.set("./jsonl-splitter.js", ["JsonlSplitterStream"]);
       return {
         file: sourceFile,
         scope: sourceFile.globalScope,
       };
+    }
+
+    intrinsic(intrinsic: IntrinsicType, name: string): EmitterOutput<string> {
+      return this.emitter.result.rawCode(code`${name}`);
     }
 
     scalarDeclaration(scalar: Scalar, name: string): EmitterOutput<string> {
@@ -57,6 +67,35 @@ export async function $onEmit(context: EmitContext) {
 
     stringLiteral(string: StringLiteral): EmitterOutput<string> {
       return this.emitter.result.rawCode(code`"${string.value}"`);
+    }
+
+    numericLiteral(number: NumericLiteral): EmitterOutput<string> {
+      return this.emitter.result.rawCode(code`${number.value.toString()}`);
+    }
+
+    unionDeclaration(union: Union, name: string): EmitterOutput<string> {
+      return this.emitter.result.declaration(
+        name,
+        code`export type ${name} = ${this.emitter.emitUnionVariants(union)}`,
+      );
+    }
+
+    unionVariants(union: Union): EmitterOutput<string> {
+      const builder = new StringBuilder();
+      let i = 0;
+      for (const variant of union.variants.values()) {
+        i++;
+        builder.push(code`${this.emitter.emitType(variant)}${i < union.variants.size ? "|" : ""}`);
+      }
+      return this.emitter.result.rawCode(builder.reduce());
+    }
+
+    unionVariant(variant: UnionVariant): EmitterOutput<string> {
+      return this.emitter.result.rawCode(code`${this.emitter.emitTypeReference(variant.type)}`);
+    }
+
+    modelInstantiation(model: Model, name: string | undefined): EmitterOutput<string> {
+      return this.emitter.result.rawCode(code`{}`);
     }
 
     modelDeclaration(model: Model, name: string): EmitterOutput<string> {
@@ -263,8 +302,95 @@ export async function $onEmit(context: EmitContext) {
         headerBuilder.push(code`"${header.name}": ${header.param.name},`);
       }
       const headers = this.#operationHeaderParams(httpOperation);
-
       const hasBody = Boolean(httpOperation.parameters.body);
+
+      const responses = flattenResponses(this.emitter.getProgram(), httpOperation);
+
+      const returnType = (() => {
+        if (!responses.length) {
+          return code`Promise<void>`;
+        }
+
+        const returnTypes = new StringBuilder();
+
+        let i = 0;
+        for (const response of responses) {
+          i++;
+          if (i > 1) {
+            returnTypes.push("| ");
+          }
+
+          if (
+            response.type.kind === "Model" &&
+            isStream(this.emitter.getProgram(), response.type)
+          ) {
+            const streamType = getStreamOf(this.emitter.getProgram(), response.type)!;
+            returnTypes.push(code`AsyncIterable<${this.emitter.emitTypeReference(streamType)}>`);
+          } else {
+            returnTypes.push(code`${this.emitter.emitTypeReference(response.type)}`);
+          }
+        }
+
+        return code`Promise<${returnTypes.reduce()}>`;
+      })();
+
+      const deserialization = (() => {
+        const deser = new StringBuilder();
+
+        if (!responses.length) {
+          deser.push(code`return;`);
+        } else {
+          let i = 0;
+          for (const response of responses) {
+            i++;
+            if (i > 1) {
+              deser.push(code` else `);
+            }
+
+            // get the content type so we know what deserialization should look like
+            const contentType = response.contentType;
+
+            if (response.streamType) {
+              const events = unsafe_getEventDefinitions(
+                this.emitter.getProgram(),
+                response.streamType as Union,
+              );
+
+              if (contentType === "application/jsonl") {
+                deser.push(
+                  code`
+                  if (response.status === ${response.statusCode.toString()} && response.headers.get("content-type") === "${contentType}") {
+                    return response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new JsonlSplitterStream()) as AsyncIterable<${this.emitter.emitTypeReference(response.streamType)}>;
+                  }
+                  `,
+                );
+              }
+            } else if (contentType === "application/json") {
+              deser.push(
+                code`
+                  if (response.status === ${response.statusCode.toString()}) {
+                    return response.json() as ${this.emitter.emitTypeReference(response.type)};
+                  }
+                `,
+              );
+            } else {
+              deser.push(
+                code`
+                  if (response.status === ${response.statusCode.toString()}) {
+                    return;
+                  }
+                `,
+              );
+            }
+          }
+        }
+
+        return code`
+        .then(async (response) => {
+          ${deser.reduce()}
+        });
+        `;
+      })();
 
       return this.emitter.result.declaration(
         name,
@@ -272,7 +398,7 @@ export async function $onEmit(context: EmitContext) {
           ${this.#emitBodySerializer(httpOperation, name)}
 
           ${doc ? `/** ${doc} */` : ""}
-          export async function ${name}(${declParams}): Promise<void> {
+          export async function ${name}(${declParams}): ${returnType} {
             const path = parseTemplate("${httpOperation.uriTemplate}").expand({${pathParamNames.join(", ")}});
 
             ${headers}
@@ -283,7 +409,7 @@ export async function $onEmit(context: EmitContext) {
               method: "${httpOperation.verb}",
               headers,
               ${hasBody ? code`body: ${this.#getSerializerName(name)}(${this.#getBodyParamNames(httpOperation)}),` : ""}
-            });
+            })${deserialization};
           }
         `,
       );
@@ -305,7 +431,11 @@ export async function $onEmit(context: EmitContext) {
 
       let fileContents = contents.segments.join("\n\n");
       if (sourceFile.meta["filetype"] === "typescript") {
-        fileContents = await prettier.format(fileContents, { parser: "typescript" });
+        try {
+          fileContents = await prettier.format(fileContents, { parser: "typescript" });
+        } catch (err: any) {
+          console.error(err.message);
+        }
       }
 
       return {
@@ -329,4 +459,8 @@ export async function $onEmit(context: EmitContext) {
   await emitter.writeOutput();
 }
 
-// 1. Get all of the operations
+// 1. Responses...
+// get all the responses
+/*
+
+ */
