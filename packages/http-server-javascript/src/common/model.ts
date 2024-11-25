@@ -7,6 +7,8 @@ import {
   isTemplateDeclaration,
   isTemplateInstance,
 } from "@typespec/compiler";
+import { isBody } from "@typespec/http";
+import { getStreamOf } from "@typespec/streams";
 import { JsContext, Module } from "../ctx.js";
 import { parseCase } from "../util/case.js";
 import { indent } from "../util/iter.js";
@@ -32,6 +34,7 @@ export function* emitModel(
 ): Iterable<string> {
   const isTemplate = isTemplateInstance(model);
   const friendlyName = getFriendlyName(ctx.program, model);
+  const streamOf = getStreamOf(ctx.program, model);
 
   if (isTemplateDeclaration(model)) {
     return;
@@ -64,9 +67,18 @@ export function* emitModel(
     const nameCase = parseCase(field.name);
     const basicName = nameCase.camelCase;
 
-    const typeReference = emitTypeReference(ctx, field.type, field, module, {
-      altName: modelNameCase.pascalCase + nameCase.pascalCase,
-    });
+    let typeReference: string;
+    if (streamOf && isBody(ctx.program, field)) {
+      typeReference = emitTypeReference(ctx, streamOf, field, module, {
+        altName: modelNameCase.pascalCase + nameCase.pascalCase,
+        requireDeclaration: true,
+      });
+      typeReference = `AsyncIterableIterator<${typeReference}>`;
+    } else {
+      typeReference = emitTypeReference(ctx, field.type, field, module, {
+        altName: modelNameCase.pascalCase + nameCase.pascalCase,
+      });
+    }
 
     const name = KEYWORDS.has(basicName) ? `_${basicName}` : basicName;
 

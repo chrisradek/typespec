@@ -162,8 +162,6 @@ export function emitTypeReference(
     }
     case "Union": {
       if (type.variants.size === 0) return "never";
-      else if (type.variants.size === 1)
-        return emitTypeReference(ctx, [...type.variants.values()][0], position, module, options);
 
       if (options.requireDeclaration) {
         if (type.name) {

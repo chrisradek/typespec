@@ -40,7 +40,9 @@
   },
   "peerDependencies": {
     "@typespec/compiler": "workspace:~",
-    "@typespec/http": "workspace:~"
+    "@typespec/events": "workspace:~",
+    "@typespec/http": "workspace:~",
+    "@typespec/streams": "workspace:~"
   },
   "dependencies": {
     "prettier": "~3.3.3"
@@ -48,7 +50,9 @@
   "devDependencies": {
     "@types/node": "~22.7.9",
     "@typespec/compiler": "workspace:~",
+    "@typespec/events": "workspace:~",
     "@typespec/http": "workspace:~",
+    "@typespec/streams": "workspace:~",
     "tsx": "^4.19.2",
     "typescript": "~5.6.3"
   }

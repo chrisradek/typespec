@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // Licensed under the MIT license.
 
-import { ModelProperty, Type } from "@typespec/compiler";
+import { Model, ModelProperty, Type } from "@typespec/compiler";
 import {
   HttpOperation,
   HttpOperationParameter,
@@ -26,6 +26,7 @@ import { bifilter, indent } from "../../util/iter.js";
 import { keywordSafe } from "../../util/keywords.js";
 import { HttpContext } from "../index.js";
 
+import { getStreamOf, isStream } from "@typespec/streams";
 import { module as routerHelpers } from "../../../generated-defs/helpers/router.js";
 import { differentiateUnion, writeCodeTree } from "../../util/differentiate.js";
 
@@ -135,7 +136,7 @@ function* emitRawServerOperation(
   }
 
   if (queryParams.length > 0) {
-    yield `  const __query_params = new URLSearchParams(request.url!.split("?", 1)[1] ?? "");`;
+    yield `  const __query_params = new URLSearchParams(request.url!.split("?")[1] ?? "");`;
     yield "";
   }
 
@@ -337,6 +338,7 @@ function* emitResultProcessingForType(
     throw new UnimplementedError(`result processing for type kind '${target.kind}'`);
   }
 
+  const hasStream = isStream(ctx.program, target);
   const body = [...target.properties.values()].find((p) => isBody(ctx.program, p));
 
   for (const property of target.properties.values()) {
@@ -357,7 +359,33 @@ function* emitResultProcessingForType(
     });
 
   if (body) {
+    // handle streaming case...
     const bodyCase = parseCase(body.name);
+    if (hasStream) {
+      const streamType = getStreamOf(ctx.program, target as Model)!;
+
+      const serializationRequired = isSerializationRequired(ctx, streamType, "application/json");
+      requireSerialization(ctx, streamType, "application/json");
+      yield `for await (const event of result.${bodyCase.camelCase}) {`;
+      if (serializationRequired) {
+        const typeReference = emitTypeReference(
+          ctx,
+          getStreamOf(ctx.program, target as Model)!,
+          body,
+          module,
+          {
+            requireDeclaration: true,
+          },
+        );
+        yield `  response.write(JSON.stringify(${typeReference}.toJsonObject(event)) + "\\n");`;
+      } else {
+        yield `  response.write(JSON.stringify(event) + "\\n");`;
+      }
+      yield `}`;
+      yield `response.end();`;
+      return;
+    }
+
     const serializationRequired = isSerializationRequired(ctx, body.type, "application/json");
     requireSerialization(ctx, body.type, "application/json");
     if (serializationRequired) {
