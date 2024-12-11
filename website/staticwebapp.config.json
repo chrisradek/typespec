@@ -2,6 +2,6 @@
   "globalHeaders": {
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' https://consentdeliveryfd.azurefd.net; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://consentdeliveryfd.azurefd.net https://js.monitor.azure.com; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"
   }
 }
