@@ -171,6 +171,91 @@ importers:
         specifier: ^5.5.6
         version: 5.7.10(@azure/identity@4.8.0)(@azure/storage-blob@12.27.0)(@types/node@22.13.17)(encoding@0.1.13)(rollup@4.40.1)(tsx@4.19.4)(typescript@5.8.3)(yaml@2.7.1)
 
+  packages/asyncapi:
+    dependencies:
+      '@alloy-js/core':
+        specifier: ^0.15.0
+        version: 0.15.0
+      '@alloy-js/json':
+        specifier: ^0.15.0
+        version: 0.15.0
+      '@alloy-js/typescript':
+        specifier: ^0.15.0
+        version: 0.15.0
+      '@typespec/compiler':
+        specifier: workspace:^
+        version: link:../compiler
+      '@typespec/emitter-framework':
+        specifier: workspace:^
+        version: link:../emitter-framework
+      '@typespec/http-client':
+        specifier: workspace:^
+        version: link:../http-client
+      prettier:
+        specifier: ~3.5.3
+        version: 3.5.3
+    devDependencies:
+      '@alloy-js/cli':
+        specifier: ^0.15.0
+        version: 0.15.0
+      '@alloy-js/rollup-plugin':
+        specifier: ^0.1.0
+        version: 0.1.0(@babel/core@7.27.1)(@types/babel__core@7.20.5)(rollup@4.40.1)
+      '@types/yargs':
+        specifier: ~17.0.33
+        version: 17.0.33
+      '@typespec/events':
+        specifier: workspace:^
+        version: link:../events
+      '@typespec/tspd':
+        specifier: workspace:^
+        version: link:../tspd
+      '@vitest/ui':
+        specifier: ^3.1.2
+        version: 3.1.2(vitest@3.1.2)
+      change-case:
+        specifier: ~5.4.4
+        version: 5.4.4
+      concurrently:
+        specifier: ^9.1.2
+        version: 9.1.2
+      cross-env:
+        specifier: ~7.0.3
+        version: 7.0.3
+      execa:
+        specifier: ^9.5.2
+        version: 9.5.2
+      fs-extra:
+        specifier: ^11.2.0
+        version: 11.3.0
+      globby:
+        specifier: ~14.1.0
+        version: 14.1.0
+      inquirer:
+        specifier: ^12.5.0
+        version: 12.6.0(@types/node@22.13.17)
+      ora:
+        specifier: ^8.1.1
+        version: 8.2.0
+      p-limit:
+        specifier: ^6.2.0
+        version: 6.2.0
+      picocolors:
+        specifier: ~1.1.1
+        version: 1.1.1
+      typescript:
+        specifier: ~5.8.2
+        version: 5.8.3
+      uri-template:
+        specifier: ^2.0.0
+        version: 2.0.0
+      vitest:
+        specifier: ^3.1.2
+        version: 3.1.2(@types/debug@4.1.12)(@types/node@22.13.17)(@vitest/ui@3.1.2)(happy-dom@17.4.6)(jsdom@25.0.1)(tsx@4.19.4)(yaml@2.7.1)
+      yargs:
+        specifier: ~17.7.2
+        version: 17.7.2
+
   packages/best-practices:
     devDependencies:
       '@types/node':
@@ -1720,6 +1805,9 @@ importers:
 
   packages/samples:
     dependencies:
+      '@typespec/asyncapi':
+        specifier: workspace:^
+        version: link:../asyncapi
       '@typespec/best-practices':
         specifier: workspace:^
         version: link:../best-practices
@@ -2697,6 +2785,9 @@ packages:
 
   '@alloy-js/core@0.15.0':
     resolution: {integrity: sha512-GfQZqaUqGBGFeFJbA9H7Iu+IJQiEQ2B3Hjh5C1N2YclEg5vtjSAb/pdqJ5x2BTqOq2iUCpFOJ44pJy5mhS116Q==}
+
+  '@alloy-js/json@0.15.0':
+    resolution: {integrity: sha512-UvQ5r9eGEPBR7TP7Ro2vmd4WieQ7fIZlSz1q54/sv86syt692PNuqW0txDvDpDJWRiMs+9iUQBcVeq1rWG/3bQ==}
 
   '@alloy-js/markdown@0.15.1':
     resolution: {integrity: sha512-drJbEo8DWDKGmJ/R2lUEyn8dVa3vKVpu9K0+1EJswQ7flgE0k1NgbXq3StIHAr8yd//VCgRHjVgV2R5E76ZjvQ==}
@@ -13630,6 +13721,11 @@ snapshots:
       pathe: 2.0.3
       picocolors: 1.1.1
       prettier: 3.5.3
+
+  '@alloy-js/json@0.15.0':
+    dependencies:
+      '@alloy-js/core': 0.15.0
+      pathe: 2.0.3
 
   '@alloy-js/markdown@0.15.1':
     dependencies:

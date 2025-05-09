@@ -43,6 +43,7 @@
     "!dist/test/**"
   ],
   "dependencies": {
+    "@typespec/asyncapi": "workspace:^",
     "@typespec/best-practices": "workspace:^",
     "@typespec/compiler": "workspace:^",
     "@typespec/events": "workspace:^",
