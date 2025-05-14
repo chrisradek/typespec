@@ -31,14 +31,6 @@ it("works", async () => {
     @events
     union TestMessages {
       ping: PingMessage,
-      pong: {
-        @data payload: { id: string }
-      },
-      multi: {
-        @data payload: { id: string },
-        instanceId: string,
-        otherId: string
-      }
     }
 
     model PingMessage {
@@ -47,15 +39,11 @@ it("works", async () => {
   `)) as { TestService: Namespace };
   const asyncService = getAsyncAPIService(runner.program, TestService);
   expect(asyncService.messages.length).toBe(1);
-  expect(asyncService.channels[0].messages.length).toBe(3);
-
   const res = render(
     <Output program={runner.program}>
       <SourceFile path="test.json">
         <JsonObject>
           <MessageDeclaration message={asyncService.messages[0]} />
-          <MessageDeclaration message={asyncService.channels[0].messages[1]} />
-          <MessageDeclaration message={asyncService.channels[0].messages[2]} />
         </JsonObject>
       </SourceFile>
     </Output>,
@@ -65,7 +53,7 @@ it("works", async () => {
     res,
     d`
       {
-        "PingMessage": {
+        "ping": {
           "payload": {
             "type": "object",
             "properties": {

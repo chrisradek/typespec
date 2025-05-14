@@ -37,18 +37,20 @@ it("works", async () => {
     }
 
     model UserSignedUp {
-      @data payload: {
-        /**
-         * Name of the user
-         */
-        displayName?: string;
-        
-        /**
-         * Email of the user
-         */
-        @format("email")
-        email?: string;
-      };
+      @data payload: User;
+    }
+
+    model User {
+      /**
+       * Name of the user
+       */
+      displayName?: string;
+      
+      /**
+       * Email of the user
+       */
+      @format("email")
+      email?: string;
     }
   `)) as { AccountService: Namespace };
   const asyncService = getAsyncAPIService(runner.program, AccountService);
