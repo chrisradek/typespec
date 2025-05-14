@@ -12,14 +12,12 @@ export interface ComponentsProps {
 
 export function Components(props: ComponentsProps) {
   return (
-    <JsonObject>
-      <JsonObjectProperty name="components">
-        <JsonObject>
-          <Messages messages={props.messages} />
-          <Schemas schemas={props.schemas} />
-        </JsonObject>
-      </JsonObjectProperty>
-    </JsonObject>
+    <JsonObjectProperty name="components">
+      <JsonObject>
+        <Messages messages={props.messages} />
+        <Schemas schemas={props.schemas} />
+      </JsonObject>
+    </JsonObjectProperty>
   );
 }
 

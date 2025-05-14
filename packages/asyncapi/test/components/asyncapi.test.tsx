@@ -28,12 +28,13 @@ it("works", async () => {
 
     @channel("user/signedup", UserSignedupChannelMessages)
     interface userSignedup {
-      @send sendUserSignedUp(@messages messages: UserSignedupChannelMessages.UserSignedUp): void;
+      @send sendUserSignedUp(@messages messages: UserSignedupChannelMessages): void;
     }
 
     @events
     union UserSignedupChannelMessages {
       UserSignedUp: UserSignedUp;
+      inline: { @data payload: { id: string }; }
     }
 
     model UserSignedUp {
@@ -78,6 +79,17 @@ it("works", async () => {
             "messages": {
               "UserSignedUp": {
                 "$ref": "#/components/messages/UserSignedUp"
+              },
+              "inline": {
+                "payload": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id"]
+                }
               }
             }
           }
@@ -91,29 +103,30 @@ it("works", async () => {
             "messages": [
               {
                 "$ref": "#/channels/userSignedup/messages/UserSignedUp"
+              },
+              {
+                "$ref": "#/channels/userSignedup/messages/inline"
               }
             ]
           }
         },
-        {
-          "components": {
-            "messages": {
-              "UserSignedUp": {
-                "payload": {
-                  "$ref": "#/components/schemas/User"
-                }
+        "components": {
+          "messages": {
+            "UserSignedUp": {
+              "payload": {
+                "$ref": "#/components/schemas/User"
               }
-            },
-            "schemas": {
-              "User": {
-                "type": "object",
-                "properties": {
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "email": {
-                    "type": "string"
-                  }
+            }
+          },
+          "schemas": {
+            "User": {
+              "type": "object",
+              "properties": {
+                "displayName": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
                 }
               }
             }

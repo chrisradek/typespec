@@ -69,7 +69,7 @@ function gatherComponents(program: Program, namespace: Namespace, componentMessa
       componentSchemas.add(context);
     },
     union(context) {
-      if (!isEvents(program, context)) {
+      if (!isEvents(program, context) && !tk.union.isExpression(context)) {
         componentSchemas.add(context);
       }
     },

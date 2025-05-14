@@ -85,7 +85,9 @@ export function getAsyncAPIService(program: Program, serviceNamespace: Namespace
         const variants = tk.unionVariant.is(type)
           ? [type]
           : tk.union.is(type)
-            ? Array.from(type.variants.values())
+            ? tk.union.isExpression(type)
+              ? Array.from(type.variants.values()).map((v) => v.type)
+              : Array.from(type.variants.values())
             : [];
 
         // find the message for this type
